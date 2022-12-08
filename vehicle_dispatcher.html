@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>driver cars dispatcher</title>
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+    integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+  <meta charset="UTF-8">
+  <!-- Replace version in the URL with desired library version -->
+  <link rel='stylesheet' type='text/css' href='https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.7.0/maps/maps.css'>
+  <script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.7.0/maps/maps-web.min.js"></script>
+  <script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.7.0/services/services-web.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    #map {
+      height: 80vh;
+      width: 100vw;
+    }
+
+    #submit-button {
+      background: #df1b12;
+      padding: 10px;
+      margin-top: 10px;
+      width: 100%;
+      color: white;
+      font-weight: bold;
+      transition: background-color .15s ease-in-out;
+      text-transform: uppercase;
+      border: none;
+      outline: none;
+    }
+
+    #submit-button:hover {
+      cursor: pointer;
+      background: #b1110e;
+    }
+
+    #labels-container {
+      font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 400px;
+      padding: 10px;
+      margin: 10px;
+      background-color: white;
+      box-shadow: rgba(0, 0, 0, 0.45) 2px 2px 2px 0px;
+    }
+
+    #labels-container label {
+      line-height: 2;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+
+    #labels-container #route-labels div {
+      border-left: 6px solid;
+      padding-left: 5px;
+      margin-top: 3px;
+    }
+
+    #route-labels div:hover {
+      cursor: pointer;
+      box-shadow: 0px 2px #888888;
+    }
+
+    #modal {
+      display: none;
+      position: fixed;
+      z-index: 1100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    #modal-content {
+      background-color: lightgray;
+      color: #555;
+      font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+      font-weight: bold;
+      text-align: center;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 20%;
+    }
+  </style>
+
+</head>
+
+<body>
+  </div>
+  <input id="pickupAddress" type="search" class="form-control" placeholder="Search location...">
+  <button onclick="searchLoc()" style="color: white; background-color: rgb(6, 6, 94);">Search</button>
+
+  <div id="map" style="position: relative ;">
+
+
+    <div id="labels-container" style="z-index: 1; position: absolute; bottom:0; height: 10%;">
+      <input type="button" id="submit-button" value="Find Driver"
+        style="color: white; background-color: rgb(6, 6, 94);">
+    </div>
+  </div>
+
+  <div id="modal">
+    <div id="modal-content"></div>
+  </div>
+  <script>
+    const apiKey = 'wNwKO5fgWhDOBLlrpOLeXaS6a5iES9Nh'; //API key we use on Twitch!
+    let pickupCoordinates;
+    const routeWeight = 9;
+    const routeBackgroundWeight = 12;
+    const modal = document.getElementById('modal');
+    const modalContent = document.getElementById('modal-content');
+    const fastestRouteColor = 'yellow' // '#65A7A9';
+
+    let pickupMarker;
+    let driverConfig = [];
+    let routes = [];
+    let driverPickupBatchCoordinatees = [];
+    let bestRouteIndex;
+
+    modal.addEventListener('click', function () {
+      modal.style.display = 'none';
+    });
+
+    function displayModal() {
+      modalContent.innerText = 'Driver name: ' + driverConfig[bestRouteIndex].name + '\nDriver number: '+driverConfig[bestRouteIndex].cellphone;
+      modal.style.display = 'block';
+    }
+
+    const map = tt.map({
+      key: apiKey,
+
+      container: 'map',
+      center: [4.876935, 52.360306],
+      zoom: 13
+    });
+
+    map.on('load', function () {
+      document.getElementById('submit-button').addEventListener('click', submitButtonHandler);
+    })
+
+
+    // search box
+    async function searchLoc() {
+      const response = await tt.services.fuzzySearch({
+        key: apiKey,
+        query: document.getElementById('pickupAddress').value,
+        limit: 5,
+        language: 'en-GB',
+        typeahead: true,
+      }).then(function (results) {
+
+        pickupCoordinates = Object.values(results.results[0].position)
+        drawpickupMarkerOnMap(results);
+      });
+    }
+
+    function createPickupMarker(markerCoordinates) {
+      const pickupMarkerElement = document.createElement('div');
+      pickupMarkerElement.innerHTML = "<img src='./icons8-map-pin-96.png' style='width: 60px; height: 60px';>";
+      return new tt.Marker({ element: pickupMarkerElement, offset: [0, 5] }).setLngLat(markerCoordinates).addTo(map);
+    }
+
+    function drawpickupMarkerOnMap(result) {
+
+      pickupMarker = createPickupMarker(pickupCoordinates)
+    }
+
+
+    // random color generator
+    function random_rgba() {
+      var o = Math.round, r = Math.random, s = 255;
+      return 'rgba(' + o(r() * s) + ',' + o(r() * s) + ',' + o(r() * s) + ',' + r().toFixed(1) + ')';
+    }
+
+
+    //Here we do manually write the locations of each of our "available" drivers. 
+    //The Routing will be used to coordinate which fixed driver has the fastest ETT to our passenger, who can move onclick.
+
+    function setDefaultDriverConfig() {
+      fetch('./drivers.json')
+        .then((response) => response.json())
+        .then((drivers) => {
+          
+          drivers.forEach(driver => {
+            driverConfig.push(addDriver(driver.name, driver.location, driver.cell_phone))
+          })
+        });
+
+    }
+
+    function addDriver(name, coordinates, cellphone) {
+      const color = random_rgba()
+      const driverMarker = document.createElement('div').innerHTML;
+      return {
+        name: name,
+        color: color,
+        icon: new tt.Marker({ element: driverMarker, offset: [0, 27], color:color }).setLngLat(coordinates).addTo(map),
+        coordinates: coordinates,
+        cellphone: cellphone
+      };
+    }
+
+    function clear() {
+      routes.forEach(function (child) {
+        map.removeLayer(child[0]);
+        map.removeLayer(child[1]);
+        map.removeSource(child[0]);
+        map.removeSource(child[1]);
+      });
+      routes = [];
+      setDefaultDriverConfig();
+      updateDriverBatchLocations(pickupCoordinates)
+      
+      // pickupMarker.togglePopup();
+    }
+
+    function submitButtonHandler() {
+      clear();
+      
+      callMatrix();
+    }
+
+    function updateDriverBatchLocations(pickupCoordinates) {
+      driverPickupBatchCoordinatees = [];
+      driverConfig.forEach(driver => {
+        driverPickupBatchCoordinatees.push(driver.coordinates + ':' + pickupCoordinates);
+      });
+    }
+
+    function drawAllRoutes() {
+      tt.services.calculateRoute({
+        batchMode: 'sync',
+        key: apiKey,
+        batchItems: [
+          { locations: driverPickupBatchCoordinatees[0] },
+          { locations: driverPickupBatchCoordinatees[1] },
+          { locations: driverPickupBatchCoordinatees[2] },
+          { locations: driverPickupBatchCoordinatees[3] }
+        ]
+      })
+        .then(function (results) {
+
+
+          results.batchItems.forEach(function (singleRoute, index) {
+            const routeGeoJson = singleRoute.toGeoJson();
+            const route = [];
+            const route_background_layer_id = 'route_background_' + index;
+            const route_layer_id = 'route_' + index;
+
+            map.addLayer(buildStyle(route_background_layer_id, routeGeoJson, 'black', routeBackgroundWeight))
+              .addLayer(buildStyle(route_layer_id, routeGeoJson, driverConfig[index].color, routeWeight));
+
+            route[0] = route_background_layer_id;
+            route[1] = route_layer_id;
+            routes[index] = route;
+
+            if (index === bestRouteIndex) {
+              const bounds = new tt.LngLatBounds();
+              routeGeoJson.features[0].geometry.coordinates.forEach(function (point) {
+                bounds.extend(tt.LngLat.convert(point));
+              });
+              map.fitBounds(bounds, { padding: 150 });
+            }
+
+            map.on("mouseenter", route_layer_id, function () {
+              map.moveLayer(route_background_layer_id);
+              map.moveLayer(route_layer_id);
+            });
+
+            map.on("mouseleave", route_layer_id, function () {
+              bringBestRouteToFront();
+            });
+          });
+          bringBestRouteToFront();
+        });
+    }
+
+    function bringBestRouteToFront() {
+      map.moveLayer(routes[bestRouteIndex][0]);
+      map.moveLayer(routes[bestRouteIndex][1]);
+    }
+
+    function buildStyle(id, data, color, width) {
+      return {
+        'id': id,
+        'type': 'line',
+        'source': {
+          'type': 'geojson',
+          'data': data
+        },
+        'paint': {
+          'line-color': color,
+          'line-width': width
+        },
+        'layout': {
+          'line-cap': 'round',
+          'line-join': 'round'
+        }
+      }
+    }
+
+    function processMatrixResponse(result) {
+      const travelTimeInSecondsArray = [];
+      const lengthInMetersArray = [];
+      const trafficDelayInSecondsArray = [];
+      result.matrix.forEach(function (child) {
+        travelTimeInSecondsArray.push(child[0].response.routeSummary.travelTimeInSeconds);
+        lengthInMetersArray.push(child[0].response.routeSummary.lengthInMeters);
+        trafficDelayInSecondsArray.push(child[0].response.routeSummary.trafficDelayInSeconds);
+      });
+
+      modifyFastestRouteColor(travelTimeInSecondsArray);
+      drawAllRoutes();
+      displayModal();
+    }
+
+    function convertToPoint(lat, long) {
+      return {
+        point: {
+          latitude: lat,
+          longitude: long
+        }
+      };
+    }
+
+
+
+    function buildOriginsParameter() {
+      const origins = [];
+      driverConfig.forEach(function (driver) {
+        origins.push(convertToPoint(driver.coordinates[1], driver.coordinates[0]));
+      })
+      return origins;
+    }
+
+    function buildDestinationsParameter() {
+      return [convertToPoint(pickupCoordinates[1], pickupCoordinates[0])];
+    }
+
+    function callMatrix() {
+      const origins = buildOriginsParameter();
+      const destinations = buildDestinationsParameter();
+      tt.services.matrixRouting({
+        key: apiKey,
+        origins: origins,
+        destinations: destinations,
+        traffic: true
+      }).then(processMatrixResponse);
+    }
+
+    function modifyFastestRouteColor(travelTimeInSecondsArray) {
+      const sortedTab = travelTimeInSecondsArray.slice();
+      sortedTab.sort(function (a, b) { return a - b });
+      bestRouteIndex = travelTimeInSecondsArray.indexOf(sortedTab[0]);
+      driverConfig[bestRouteIndex].color = fastestRouteColor;
+
+      console.log(Math.floor(sortedTab[0]/60) + ' mins\n'+ driverConfig[bestRouteIndex].name) //-- time in seconds to destination
+
+    }
+
+  </script>
+
+  <!-- Optional JavaScript -->
+  <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
+    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"></script>
+</body>
+
+</html>

@@ -1,0 +1,62 @@
+[
+    {
+      "id": 1,
+      "licence": null,
+      "is_current": false,
+      "name": "Sarah",
+      "status": "available",
+      "address": "92 Blueduck St",
+      "cell_phone": "0519482982",
+      "email": "",
+      "location": [4.902642, 52.373627],
+      "last_seen": "2022-12-05T08:02:40.901882",
+      "vehicle_type": "car",
+      "vehicle_license": "hj88iogp",
+      "vehicle_description": "Blue Polo"
+    },
+    {
+      "id": 2,
+      "licence": null,
+      "is_current": true,
+      "name": "Arya",
+      "status": "available",
+      "address": "9 Electric Av",
+      "cell_phone": "05134567891",
+      "email": "",
+      "location": [4.927198, 52.365927],
+      "last_seen": "2022-12-05T08:02:40.901882",
+      "vehicle_type": "bicycle",
+      "vehicle_license": "hj766gjf",
+      "vehicle_description": "Red Trim"
+    },
+    {
+        "id": 3,
+        "licence": null,
+        "is_current": false,
+        "name": "Tomlin",
+        "status": "available",
+        "address": "92 Blueduck St",
+        "cell_phone": "0519482982",
+        "email": "",
+        "location": [4.893488, 52.347878],
+        "last_seen": "2022-12-05T08:02:40.901882",
+        "vehicle_type": "car",
+        "vehicle_license": "hj88iogp",
+        "vehicle_description": "Blue Polo"
+      },
+      {
+        "id": 4,
+        "licence": null,
+        "is_current": true,
+        "name": "Martel",
+        "status": "available",
+        "address": "9 Electric Av",
+        "cell_phone": "05134567891",
+        "email": "",
+        "location": [4.858433, 52.349447],
+        "last_seen": "2022-12-05T08:02:40.901882",
+        "vehicle_type": "bicycle",
+        "vehicle_license": "hj766gjf",
+        "vehicle_description": "Red Trim"
+      }
+  ]  
