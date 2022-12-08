@@ -115,7 +115,7 @@
     <div id="modal-content"></div>
   </div>
   <script>
-    const apiKey = 'wNwKO5fgWhDOBLlrpOLeXaS6a5iES9Nh'; //API key we use on Twitch!
+    const apiKey = ''; //API KEY FROM TOMTOM
     let pickupCoordinates;
     const routeWeight = 9;
     const routeBackgroundWeight = 12;
@@ -132,7 +132,8 @@
     modal.addEventListener('click', function () {
       modal.style.display = 'none';
     });
-
+    
+    // display closest driver results
     function displayModal() {
       modalContent.innerText = 'Driver name: ' + driverConfig[bestRouteIndex].name + '\nDriver number: '+driverConfig[bestRouteIndex].cellphone;
       modal.style.display = 'block';
@@ -151,7 +152,7 @@
     })
 
 
-    // search box
+    // search box function
     async function searchLoc() {
       const response = await tt.services.fuzzySearch({
         key: apiKey,
@@ -185,9 +186,7 @@
     }
 
 
-    //Here we do manually write the locations of each of our "available" drivers. 
-    //The Routing will be used to coordinate which fixed driver has the fastest ETT to our passenger, who can move onclick.
-
+    //add drivers from json file
     function setDefaultDriverConfig() {
       fetch('./drivers.json')
         .then((response) => response.json())
@@ -222,8 +221,6 @@
       routes = [];
       setDefaultDriverConfig();
       updateDriverBatchLocations(pickupCoordinates)
-      
-      // pickupMarker.togglePopup();
     }
 
     function submitButtonHandler() {
@@ -365,7 +362,6 @@
       sortedTab.sort(function (a, b) { return a - b });
       bestRouteIndex = travelTimeInSecondsArray.indexOf(sortedTab[0]);
       driverConfig[bestRouteIndex].color = fastestRouteColor;
-
       console.log(Math.floor(sortedTab[0]/60) + ' mins\n'+ driverConfig[bestRouteIndex].name) //-- time in seconds to destination
 
     }
