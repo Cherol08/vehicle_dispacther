@@ -115,7 +115,7 @@
     <div id="modal-content"></div>
   </div>
   <script>
-    const apiKey = ''; //API KEY FROM TOMTOM
+    const apiKey = ''; //API KEY from tomtom
     let pickupCoordinates;
     const routeWeight = 9;
     const routeBackgroundWeight = 12;
@@ -132,8 +132,7 @@
     modal.addEventListener('click', function () {
       modal.style.display = 'none';
     });
-    
-    // display closest driver results
+
     function displayModal() {
       modalContent.innerText = 'Driver name: ' + driverConfig[bestRouteIndex].name + '\nDriver number: '+driverConfig[bestRouteIndex].cellphone;
       modal.style.display = 'block';
@@ -152,7 +151,7 @@
     })
 
 
-    // search box function
+    // search box
     async function searchLoc() {
       const response = await tt.services.fuzzySearch({
         key: apiKey,
@@ -174,7 +173,6 @@
     }
 
     function drawpickupMarkerOnMap(result) {
-
       pickupMarker = createPickupMarker(pickupCoordinates)
     }
 
@@ -185,8 +183,6 @@
       return 'rgba(' + o(r() * s) + ',' + o(r() * s) + ',' + o(r() * s) + ',' + r().toFixed(1) + ')';
     }
 
-
-    //add drivers from json file
     function setDefaultDriverConfig() {
       fetch('./drivers.json')
         .then((response) => response.json())
@@ -224,13 +220,15 @@
     }
 
     function submitButtonHandler() {
-      clear();
-      
+      clear();  
       callMatrix();
+
+      if(document.getElementById("submit-button").value === 'Find Driver'){
+        document.getElementById("submit-button").value = 'Find Best Route'
+      }
     }
 
     function updateDriverBatchLocations(pickupCoordinates) {
-      driverPickupBatchCoordinatees = [];
       driverConfig.forEach(driver => {
         driverPickupBatchCoordinatees.push(driver.coordinates + ':' + pickupCoordinates);
       });
@@ -333,13 +331,16 @@
     }
 
 
-
-    function buildOriginsParameter() {
-      const origins = [];
+    function buildDriverCoordinateOrigins(origins){
       driverConfig.forEach(function (driver) {
         origins.push(convertToPoint(driver.coordinates[1], driver.coordinates[0]));
       })
       return origins;
+    }
+
+    function buildOriginsParameter() {
+      const origins = [];
+      return buildDriverCoordinateOrigins(origins)
     }
 
     function buildDestinationsParameter() {
@@ -349,12 +350,14 @@
     function callMatrix() {
       const origins = buildOriginsParameter();
       const destinations = buildDestinationsParameter();
-      tt.services.matrixRouting({
-        key: apiKey,
-        origins: origins,
-        destinations: destinations,
-        traffic: true
-      }).then(processMatrixResponse);
+      if(origins.length > 0) {
+        tt.services.matrixRouting({
+          key: apiKey,
+          origins: origins,
+          destinations: destinations,
+          traffic: true
+        }).then(processMatrixResponse);
+      }
     }
 
     function modifyFastestRouteColor(travelTimeInSecondsArray) {
@@ -362,6 +365,7 @@
       sortedTab.sort(function (a, b) { return a - b });
       bestRouteIndex = travelTimeInSecondsArray.indexOf(sortedTab[0]);
       driverConfig[bestRouteIndex].color = fastestRouteColor;
+
       console.log(Math.floor(sortedTab[0]/60) + ' mins\n'+ driverConfig[bestRouteIndex].name) //-- time in seconds to destination
 
     }
